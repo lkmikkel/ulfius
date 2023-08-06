@@ -1079,9 +1079,14 @@ static struct MHD_Daemon * ulfius_run_mhd_daemon(struct _u_instance * u_instance
     mhd_ops[1].value = (intptr_t)mhd_request_completed;
     mhd_ops[1].ptr_value = NULL;
 
+
 #if MHD_VERSION >= 0x00095208
-    // If bind_address6 is specified, listen only to IPV6 addresses
-    if (u_instance->bind_address6 != NULL) {
+    if (u_instance->socket_fd >= 0) {
+      mhd_ops[2].option = MHD_OPTION_LISTEN_SOCKET;
+      mhd_ops[2].value = u_instance->socket_fd;
+      mhd_ops[2].ptr_value = NULL;
+    } else if (u_instance->bind_address6 != NULL) {
+      // If bind_address6 is specified, listen only to IPV6 addresses
       mhd_ops[2].option = MHD_OPTION_SOCK_ADDR;
       mhd_ops[2].value = 0;
       mhd_ops[2].ptr_value = (void *)u_instance->bind_address6;
@@ -1630,6 +1635,7 @@ void ulfius_clean_instance(struct _u_instance * u_instance) {
     u_instance->endpoint_list = NULL;
     u_instance->default_headers = NULL;
     u_instance->default_auth_realm = NULL;
+    u_instance->socket_fd = -1;
     u_instance->bind_address = NULL;
     u_instance->default_endpoint = NULL;
 #ifndef U_DISABLE_WEBSOCKET
@@ -1649,6 +1655,7 @@ void ulfius_clean_instance(struct _u_instance * u_instance) {
 }
 
 static int internal_ulfius_init_instance(struct _u_instance * u_instance,
+                                         int socket_fd,
                                          unsigned int port,
                                          struct sockaddr_in * bind_address4,
                                          struct sockaddr_in6 * bind_address6,
@@ -1667,6 +1674,7 @@ UNUSED(network_type);
     u_instance->mhd_daemon = NULL;
     u_instance->status = U_STATUS_STOP;
     u_instance->port = port;
+    u_instance->socket_fd = socket_fd;
     u_instance->bind_address = bind_address4;
     u_instance->bind_address6 = bind_address6;
 #if MHD_VERSION >= 0x00095208
@@ -1730,18 +1738,22 @@ UNUSED(network_type);
 }
 
 int ulfius_init_instance(struct _u_instance * u_instance, unsigned int port, struct sockaddr_in * bind_address, const char * default_auth_realm) {
-  return internal_ulfius_init_instance(u_instance, port, bind_address, NULL, U_USE_IPV4, default_auth_realm);
+  return internal_ulfius_init_instance(u_instance, -1, port, bind_address, NULL, U_USE_IPV4, default_auth_realm);
 }
 
 #if MHD_VERSION >= 0x00095208
 int ulfius_init_instance_ipv6(struct _u_instance * u_instance, unsigned int port, struct sockaddr_in6 * bind_address, unsigned short network_type, const char * default_auth_realm) {
   if (network_type & U_USE_IPV6) {
-    return internal_ulfius_init_instance(u_instance, port, NULL, bind_address, bind_address!=NULL?U_USE_IPV6:network_type, default_auth_realm);
+    return internal_ulfius_init_instance(u_instance, -1, port, NULL, bind_address, bind_address!=NULL?U_USE_IPV6:network_type, default_auth_realm);
   } else {
     return U_ERROR_PARAMS;
   }
 }
 #endif
+
+int ulfius_init_instance_socket_fd(struct _u_instance * u_instance, int socket_fd, const char * default_auth_realm) {
+  return internal_ulfius_init_instance(u_instance, socket_fd, 8080, NULL, NULL, U_USE_ALL, default_auth_realm);
+}
 
 void u_free(void * data) {
   o_free(data);

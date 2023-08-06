@@ -320,6 +320,7 @@ struct _u_instance {
 #if MHD_VERSION >= 0x00095208
   unsigned short                network_type; /* !< Listen to ipv4 and or ipv6 connections, values available are U_USE_ALL, U_USE_IPV4 or U_USE_IPV6 */
 #endif
+  int                           socket_fd; /* !< socket filedescriptor to listen to (optional) */
   struct sockaddr_in          * bind_address; /* !< ipv4 address to listen to (optional) */
   struct sockaddr_in6         * bind_address6; /* !< ipv6 address to listen to (optional) */
   unsigned int                  timeout; /* !< Timeout to close the connection because of inactivity between the client and the server */
@@ -433,6 +434,8 @@ int ulfius_init_instance(struct _u_instance * u_instance, unsigned int port, str
  */
 int ulfius_init_instance_ipv6(struct _u_instance * u_instance, unsigned int port, struct sockaddr_in6 * bind_address, unsigned short network_type, const char * default_auth_realm);
 #endif
+
+int ulfius_init_instance_socket_fd(struct _u_instance * u_instance, int socket_fd, const char * default_auth_realm);
 
 /**
  * ulfius_clean_instance
